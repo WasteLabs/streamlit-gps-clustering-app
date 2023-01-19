@@ -1,11 +1,7 @@
-"""
-# My first app
-Here's our first attempt at using data to create a table:
-"""
 import io
+import logging
 import os
 import sys
-import typing as tp
 
 from keplergl import KeplerGl
 import pandas as pd
@@ -21,9 +17,10 @@ from src import configs  # noqa: E402,I100
 from src import clustering_models  # noqa: E402,I100
 from src import models  # noqa: E402,I100
 
+
 st.set_page_config(
     page_icon="🚛",
-    page_title="GPS clustering",
+    page_title="GPS clustering application",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -32,17 +29,31 @@ st.set_page_config(
 class Dashboard:
 
     @staticmethod
-    def decode_uploader_csv_content(
-            file_uploader_widget: st.runtime.uploaded_file_manager.UploadedFile,
-    ) -> tp.Union[pd.DataFrame, None]:
-        widget_content = file_uploader_widget.getvalue()
-        widget_string_content = widget_content.decode("utf-8")
-        df = pd.read_csv(
-            io.StringIO(widget_string_content),
-            delimiter=',',
-            dtype=str,
-        )
-        return df
+    def decode_uploaded_file_content(
+        widget: st.runtime.uploaded_file_manager.UploadedFile,
+    ) -> pd.DataFrame:
+        """
+        Function decoding uploaded csv file content into pandas dataframe
+
+        Args:
+        widget (st.runtime.uploaded_file_manager.UploadedFile): source file
+
+        Returns:
+        tp.Union[pd.DataFrame, None]: _description_
+        """
+        try:
+            raw_content = widget.getvalue()
+            string_content = raw_content.decode("utf-8")
+            df = pd.read_csv(
+                io.StringIO(string_content),
+                delimiter=',',
+                dtype=str,
+            )
+            return df
+        except Exception as exc:
+            msg = f"Failure at decoding uploaded csv file: {exc}"
+            logging.error(msg)
+            raise RuntimeError(msg)
 
     @staticmethod
     def aggregate_clusters(gps: pd.DataFrame) -> pd.DataFrame:
@@ -69,21 +80,22 @@ class Dashboard:
         return gps.merge(clusters, how="left")
 
     @staticmethod
-    def render_map(gps: pd.DataFrame):
-        kepler_map = KeplerGl(
-            data={"gps": gps.fillna("")},
-            height=configs.MAP_HEIGHT,
-            config=configs.kepler_map_config,
-        )
-        html = kepler_map._repr_html_(center_map=True, read_only=True)
-        components.html(html, height=configs.MAP_HEIGHT)
+    def render_map(left, gps: pd.DataFrame):
+        with left:
+            kepler_map = KeplerGl(
+                data={"gps": gps.fillna("")},
+                height=configs.MAP_HEIGHT,
+                config=configs.kepler_map_config,
+            )
+            html = kepler_map._repr_html_(center_map=True, read_only=True)
+            components.html(html, height=configs.MAP_HEIGHT)
 
 
 def render_dashboard():
 
     st.write(configs.heading)
     file_uploader_widget = st.file_uploader(
-        label="Upload your gps file here",
+        label="GPS records file",
         type=["csv"],
         accept_multiple_files=False,
         key=None,
@@ -94,13 +106,21 @@ def render_dashboard():
     )
 
     if file_uploader_widget is not None:
-        gps_records = Dashboard.decode_uploader_csv_content(file_uploader_widget)
+        gps_records = Dashboard.decode_uploaded_file_content(file_uploader_widget)
         gps_records = clustering_models.vfhdbscan.predict(gps_records)
         agg_clusters = Dashboard.aggregate_clusters(gps_records.copy())
         gps_records = Dashboard.join_clusters_to_gps(gps=gps_records, clusters=agg_clusters)
         gps_records = models.validate_visualization_schema(gps_records)
-        Dashboard.render_map(gps_records)
-        st.dataframe(agg_clusters.rename(columns={"service_duration": "service_duration (seconds)"}))
+        col_left, col_right = st.columns(2, gap="small")
+        Dashboard.render_map(col_left, gps_records)
+        col_right.dataframe(
+            agg_clusters.rename(
+                columns={"service_duration": "service_duration (seconds)"},
+            ),
+            height=configs.MAP_HEIGHT,
+        )
 
 
-render_dashboard()
+if __name__ == "__main__":
+    logging.info("Starting dashboard")
+    render_dashboard()
