@@ -15,10 +15,6 @@ heading = """
 
 ### 📄 Sample GPS records
 """
-heading += (
-    "https://drive.google.com/drive/folders"
-    "/1dvkUTcdcDqQzK1LkphX1r3iPJ-nPQz2d?usp=share_link"
-)
 MAP_HEIGHT = 700
 
 

@@ -26,6 +26,15 @@ st.set_page_config(
 )
 
 
+@st.cache
+def read_sample_gps():
+    return pd.read_csv("src/gps_samples.csv")
+
+
+@st.experimental_memo
+def convert_df(df):
+   return df.to_csv(index=False).encode('utf-8')
+
 class Dashboard:
 
     @staticmethod
@@ -94,6 +103,16 @@ class Dashboard:
 def render_dashboard():
 
     st.write(configs.heading)
+    gps = read_sample_gps()
+    csv = convert_df(gps)
+    st.download_button(
+        "Press to Download GPS samples",
+        csv,
+        "gps_records_sample.csv",
+        "text/csv",
+        key='download-csv'
+    )
+
     file_uploader_widget = st.file_uploader(
         label="GPS records file",
         type=["csv"],
