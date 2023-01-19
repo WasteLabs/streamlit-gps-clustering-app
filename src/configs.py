@@ -5,13 +5,13 @@ heading = """
 # 🚛 GPS records clustering system
 
 👣 User guide:
-1. Choose `csv` of GPS files
-2. Upload
-3. Observe results
+1. Select a `csv` file with GPS records
+2. Upload the file
+3. Inspect the results
 
 🚫 Constraints
-1. Only one unique vehicle in a file
-2. No any GPS timestamp duplicates
+1. Only include one unique vehicle in a file
+2. Do not include any duplicate time-stamps in the GPS records
 """
 
 MAP_HEIGHT = 700
